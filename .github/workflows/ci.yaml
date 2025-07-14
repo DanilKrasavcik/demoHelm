@@ -42,7 +42,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -f demo/Dockerfile -t danilkhasanov/demo:${{ github.sha }} ./demo
+          docker build -f demo/demo/Dockerfile -t danilkhasanov/demo:${{ github.sha }} .demo/demo
 
       - name: Push Docker image
         run: |
