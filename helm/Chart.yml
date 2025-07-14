@@ -1,4 +1,4 @@
 apiVersion: v2
 name: my-chart
 version: 0.1.0
-description: Мой тестовый Helm-чарт для k8s
+description: Helm chart1

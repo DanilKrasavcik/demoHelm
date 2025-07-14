@@ -51,4 +51,5 @@ jobs:
           helm upgrade --install demo ./helm \
             --set image.repository=danilkhasanov/demo \
             --set image.tag=latest
+            --debug
           # Можно добавить команды для деплоя через kubectl или helm, если нужно автоматизировать.
