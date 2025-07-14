@@ -12,11 +12,7 @@ repositories {
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web:2.7.8'
-	testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.0' // Use the latest stable version
-	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.0' // Use the same version
-	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	// https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-test-autoconfigure
-	testImplementation("org.springframework.boot:spring-boot-test-autoconfigure:3.5.3")
+
 }
 
 application {
