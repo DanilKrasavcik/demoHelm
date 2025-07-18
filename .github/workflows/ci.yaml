@@ -56,16 +56,26 @@ jobs:
 
       - name: Connect to existing k3d cluster
         run: |
-          # Устанавливаем k3d (если еще не установлен)
+          # 1. Установка k3d (если не установлен)
           curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
-          
-          # Создаем .kube директорию и получаем конфиг
+
+          # 2. Проверяем существование кластера
+          if ! k3d cluster list | grep -q mycluster; then
+            echo "Error: k3d cluster 'mycluster' not found!"
+            echo "Available clusters:"
+            k3d cluster list
+            exit 1
+          fi
+
+          # 3. Настраиваем доступ
           mkdir -p ~/.kube
           k3d kubeconfig get mycluster > ~/.kube/config
           chmod 600 ~/.kube/config
 
-          # Проверяем подключение
+          # 4. Проверяем подключение
+          echo "Cluster info:"
           kubectl cluster-info
+          echo "Nodes:"
           kubectl get nodes
 
       - name: Install Helm
