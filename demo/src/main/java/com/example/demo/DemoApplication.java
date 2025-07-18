@@ -14,6 +14,6 @@ public class DemoApplication {
 
 	@GetMapping("/")
 	public String hello() {
-		return "Hello, Minikube with Gradle! ";
+		return "Hello, Minikube with Gradle!";
 	}
 }
