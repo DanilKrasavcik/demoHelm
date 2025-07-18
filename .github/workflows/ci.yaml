@@ -54,13 +54,13 @@ jobs:
           mkdir -p $HOME/.kube
 
           # Проверяем наличие секрета
-          if [ -z "${{ secrets.KUBECONFIG_BASE64 }}" ]; then
-            echo "::error::KUBECONFIG_BASE64 secret is missing or empty!"
+          if [ -z "${{ secrets.KUBECONFIG }}" ]; then
+            echo "::error::KUBECONFIG secret is missing or empty!"
             exit 1
           fi
 
           # Декодируем и сохраняем kubeconfig
-          echo "${{ secrets.KUBECONFIG_BASE64 }}" | base64 -d > $HOME/.kube/config
+          echo "${{ secrets.KUBECONFIG }}" -d > $HOME/.kube/config
 
           # Проверяем что файл не пустой
           if [ ! -s "$HOME/.kube/config" ]; then
