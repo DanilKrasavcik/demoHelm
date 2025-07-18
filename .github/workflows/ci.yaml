@@ -40,11 +40,17 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build Docker image
+      - name: Build and push Docker image
         run: |
-          # Сборка образа в среде k3d
-          docker build -f demo/Dockerfile -t k3d-mycluster-registry:5000/demo:${{ github.sha }} ./demo
-          docker push k3d-mycluster-registry:5000/demo:${{ github.sha }}
+          # Включаем registry в k3d
+          k3d registry create myregistry --port 5000
+          k3d cluster create mycluster --registry-use k3d-myregistry:5000
+
+          # Собираем образ с правильным тегом
+          docker build -f demo/Dockerfile -t k3d-myregistry:5000/demo:${{ github.sha }} ./demo
+
+          # Пушим образ в registry k3d
+          docker push k3d-myregistry:5000/demo:${{ github.sha }}
 
       - name: Setup Kubernetes
         run: |
