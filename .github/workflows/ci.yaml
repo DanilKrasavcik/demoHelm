@@ -52,7 +52,15 @@ jobs:
         run: |
           mkdir -p $HOME/.kube
           echo "${{ secrets.KUBECONFIG_BASE64 }}" | base64 -d > $HOME/.kube/config
+          # Заменяем неработающий хост и порт
+          sed -i 's|https://host.docker.internal:[0-9]*|https://127.0.0.1:6443|g' $HOME/.kube/config
           chmod 600 $HOME/.kube/config
+
+      - name: Port forwarding for Kubernetes API
+        run: |
+          # Пробрасываем порт Kubernetes API
+          kubectl port-forward service/kubernetes 6443:443 -n default &
+          sleep 5  # Даем время для установки соединения
 
       - name: Deploy to Minikube (optional)
         if: github.ref == 'refs/heads/main'
@@ -63,4 +71,5 @@ jobs:
             --namespace=default \
             --create-namespace \
             --debug  
+            --kube-apiserver https://127.0.0.1:6443
           # Можно добавить команды для деплоя через kubectl или helm, если нужно автоматизировать.
