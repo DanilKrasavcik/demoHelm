@@ -50,23 +50,53 @@ jobs:
 
       - name: Setup Kubernetes config
         run: |
+          # Создаем директорию .kube
           mkdir -p $HOME/.kube
-          echo "${{ secrets.KUBECONFIG_BASE64 }}" | base64 -d > $HOME/.kube/config
-          
-          # Проверяем содержимое конфига
-          echo "=== Current kubeconfig ==="
-          cat $HOME/.kube/config
-          echo "========================="
-          
-          # Автоматически определяем первый доступный контекст
-          CURRENT_CONTEXT=$(kubectl config view -o jsonpath='{.current-context}')
-          if [ -z "$CURRENT_CONTEXT" ]; then
-            CURRENT_CONTEXT=$(kubectl config view -o jsonpath='{.contexts[0].name}')
-            kubectl config use-context $CURRENT_CONTEXT
+
+          # Проверяем, что секрет содержит данные
+          if [ -z "${{ secrets.KUBECONFIG_BASE64 }}" ]; then
+            echo "ERROR: KUBECONFIG_BASE64 secret is empty!"
+            exit 1
           fi
-          
-          echo "Using context: $CURRENT_CONTEXT"
+
+          # Декодируем и сохраняем kubeconfig
+          echo "${{ secrets.KUBECONFIG_BASE64 }}" | base64 -d > $HOME/.kube/config
+
+          # Проверяем, что файл не пустой
+          if [ ! -s "$HOME/.kube/config" ]; then
+            echo "ERROR: kubeconfig is empty after decoding!"
+            exit 1
+          fi
+
+          # Выводим информацию о конфиге (без sensitive данных)
+          echo "=== Kubeconfig summary ==="
+          kubectl config view --minify --raw | grep -v 'certificate-authority-data:' | grep -v 'client-certificate-data:' | grep -v 'client-key-data:'
+          echo "========================="
+
+          # Устанавливаем правильные права
           chmod 600 $HOME/.kube/config
+
+          # Проверяем доступные контексты
+          echo "=== Available contexts ==="
+          kubectl config get-contexts || true
+          echo "========================="
+
+          # Автоматически определяем контекст
+          if ! CURRENT_CONTEXT=$(kubectl config current-context 2>/dev/null); then
+            echo "No current context set, using first available context"
+            CURRENT_CONTEXT=$(kubectl config view -o jsonpath='{.contexts[0].name}')
+            if [ -z "$CURRENT_CONTEXT" ]; then
+              echo "ERROR: No contexts found in kubeconfig!"
+              exit 1
+            fi
+            kubectl config use-context "$CURRENT_CONTEXT"
+          fi
+
+          echo "Using context: $CURRENT_CONTEXT"
+
+          # Проверяем подключение
+          kubectl cluster-info
+          kubectl get nodes
 
       - name: Configure Kubernetes access
         run: |
