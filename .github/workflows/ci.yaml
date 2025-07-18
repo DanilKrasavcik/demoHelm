@@ -64,9 +64,9 @@ jobs:
           k3d kubeconfig get mycluster > ~/.kube/config
           chmod 600 ~/.kube/config
 
-    # Проверяем подключение
-    kubectl cluster-info
-    kubectl get nodes
+          # Проверяем подключение
+          kubectl cluster-info
+          kubectl get nodes
 
       - name: Install Helm
         uses: azure/setup-helm@v3
