@@ -52,17 +52,32 @@ jobs:
         run: |
           mkdir -p $HOME/.kube
           echo "${{ secrets.KUBECONFIG_BASE64 }}" | base64 -d > $HOME/.kube/config
-          # Заменяем неработающий хост и порт
-          sed -i 's|https://host.docker.internal:[0-9]*|https://127.0.0.1:6443|g' $HOME/.kube/config
+          
+          # Проверяем содержимое конфига
+          echo "=== Current kubeconfig ==="
+          cat $HOME/.kube/config
+          echo "========================="
+          
+          # Автоматически определяем первый доступный контекст
+          CURRENT_CONTEXT=$(kubectl config view -o jsonpath='{.current-context}')
+          if [ -z "$CURRENT_CONTEXT" ]; then
+            CURRENT_CONTEXT=$(kubectl config view -o jsonpath='{.contexts[0].name}')
+            kubectl config use-context $CURRENT_CONTEXT
+          fi
+          
+          echo "Using context: $CURRENT_CONTEXT"
           chmod 600 $HOME/.kube/config
 
       - name: Configure Kubernetes access
-        run: |          
+        run: |
           # Проверяем доступные контексты
+          echo "=== Available contexts ==="
           kubectl config get-contexts
+          echo "========================="
           
-          # Устанавливаем правильный контекст (замените на ваш реальный)
-          kubectl config use-context k3d-mycluster
+          # Используем автоматически определенный контекст
+          CURRENT_CONTEXT=$(kubectl config current-context)
+          echo "Current context: $CURRENT_CONTEXT"
           
           # Проверяем подключение
           kubectl cluster-info
