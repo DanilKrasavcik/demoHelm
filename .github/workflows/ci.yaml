@@ -48,35 +48,15 @@ jobs:
         run: |
           docker push danilkhasanov/demo:${{ github.sha }}
 
-      - name: Setup Kubernetes config
+      - name: Setup Kubernetes
         run: |
-          # Создаем директорию .kube
           mkdir -p $HOME/.kube
-
-          # Проверяем наличие секрета
-          if [ -z "${{ secrets.KUBECONFIG_BASE64 }}" ]; then
-            echo "::error::KUBECONFIG_BASE64 secret is missing or empty!"
-            exit 1
-          fi
-
-          # Декодируем и сохраняем kubeconfig
           echo "${{ secrets.KUBECONFIG_BASE64 }}" | base64 -d > $HOME/.kube/config
 
-          # Проверяем что файл не пустой
-          if [ ! -s "$HOME/.kube/config" ]; then
-            echo "::error::Decoded kubeconfig is empty!"
-            exit 1
-          fi
+          # Заменяем host.docker.internal на доступный адрес
+          sed -i 's/host.docker.internal/172.17.0.1/g' $HOME/.kube/config
 
-          # Устанавливаем права
           chmod 600 $HOME/.kube/config
-
-          # Проверяем конфигурацию
-          echo "=== Kubernetes Config ==="
-          kubectl config view --minify --raw | grep -v -e 'certificate' -e 'key-data'
-          echo "========================"
-
-          # Проверяем доступность кластера
           kubectl cluster-info
           kubectl get nodes
 
