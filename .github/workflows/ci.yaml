@@ -34,18 +34,25 @@ jobs:
         run: ./gradlew build --no-daemon
         working-directory: ./demo
 
+      - name: Prepare Docker context
+        run: |
+          mkdir -p docker-build
+          cp demo/build/libs/*.jar docker-build/app.jar  # копируем JAR
+          cp demo/Dockerfile docker-build/               # копируем Dockerfile
+
       - name: Login to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push
+      - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
+          context: docker-build
           push: true
           tags: danilkhasanov/demo:latest
-          file: demo/Dockerfile
+          file: docker-build/Dockerfile
 
       - name: Install Helm
         uses: azure/setup-helm@v3
@@ -53,7 +60,14 @@ jobs:
       - name: Deploy to Dev
         if: github.ref == 'refs/heads/main'
         run: |
+          # Проверяем/создаем namespace
+          kubectl create namespace dev --dry-run=client -o yaml | kubectl apply -f -
+
+          # Устанавливаем/обновляем релиз
           helm upgrade --install demo ./helm \
             --namespace dev \
             --create-namespace \
-            --set image.tag=latest
+            --set image.repository=danilkhasanov/demo \
+            --set image.tag=latest \
+            --wait \
+            --timeout 5m
