@@ -37,8 +37,9 @@ jobs:
       - name: Prepare Docker context
         run: |
           mkdir -p docker-build
-          cp demo/build/libs/*.jar docker-build/app.jar  # копируем JAR
-          cp demo/Dockerfile docker-build/               # копируем Dockerfile
+          JAR_FILE=$(ls demo/build/libs/*.jar | head -n 1)
+          cp "$JAR_FILE" docker-build/app.jar
+          cp demo/Dockerfile docker-build/  
 
       - name: Login to Docker Hub
         uses: docker/login-action@v2
@@ -54,52 +55,53 @@ jobs:
           tags: danilkhasanov/demo:latest
           file: docker-build/Dockerfile
 
-      - name: Connect to existing k3d cluster
+      - name: Setup k3d access
         run: |
-          # 1. Установка k3d (если не установлен)
+          # Установка k3d
           curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
-
-          # 2. Проверяем существование кластера
+          
+          # Проверка существования кластера
           if ! k3d cluster list | grep -q mycluster; then
-            echo "Error: k3d cluster 'mycluster' not found!"
+            echo "Error: Cluster 'mycluster' not found!"
             echo "Available clusters:"
             k3d cluster list
             exit 1
           fi
-
-          # 3. Настраиваем доступ
+          
+          # Настройка доступа
           mkdir -p ~/.kube
           k3d kubeconfig get mycluster > ~/.kube/config
           chmod 600 ~/.kube/config
-
-          # 4. Проверяем подключение
-          echo "Cluster info:"
+          
+          # Проверка подключения
+          kubectl config use-context k3d-mycluster
           kubectl cluster-info
-          echo "Nodes:"
-          kubectl get nodes
+          kubectl get nodes  
 
       - name: Install Helm
         uses: azure/setup-helm@v3
 
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@v3
-        with:
-          version: 'v1.30.5'  # Укажите версию вашего кластера
-
-            # 2. Настройка доступа к кластеру
-      - name: Deploy to Cluster
+      - name: Deploy to k3d cluster
         run: |
-          # Создаем namespace если не существует
+          # Создаем namespace
           kubectl create namespace dev --dry-run=client -o yaml | kubectl apply -f -
           
-          # Деплой с явным указанием контекста
+          # Деплой приложения
           helm upgrade --install demo ./helm \
-            --kube-context=k3d-mycluster \
-            --namespace dev \
-            --set image.repository=danilkhasanov/demo \
-            --set image.tag=latest \
-            --set service.type=NodePort \
-            --set service.nodePort=30080 \
-            --wait \
-            --timeout 5m \
-            --debug
+          --kube-context k3d-mycluster \
+          --namespace dev \
+          --create-namespace \
+          --set image.repository=danilkhasanov/demo \
+          --set image.tag=latest \
+          --set service.type=NodePort \
+          --set service.nodePort=30080 \
+          --wait \
+          --timeout 5m \
+          --debug
+
+      - name: Verify deployment
+        run: |
+          echo "Application endpoints:"
+          echo "1. NodePort: http://host.docker.internal:30080"
+          echo "2. Port-forward: kubectl port-forward svc/demo 8080:80 -n dev"
+          kubectl get all -n dev
