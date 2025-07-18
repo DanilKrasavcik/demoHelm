@@ -1,6 +1,0 @@
-image:
-  repository: danilkhasanov/demo
-  tag: latest
-
-secrets:
-  api_key: ""
