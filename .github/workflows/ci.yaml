@@ -61,6 +61,7 @@ jobs:
           echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
           chmod 600 ~/.kube/config
           kubectl config use-context k3d-mycluster
+          kubectl config set-cluster k3d-mycluster --server=https://127.0.0.1:49340
           kubectl get nodes  
 
       - name: Install Helm
