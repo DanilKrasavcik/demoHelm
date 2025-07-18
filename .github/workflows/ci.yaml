@@ -66,10 +66,10 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: |
           helm upgrade --install demo ./helm \
+            --kube-context=k3d-mycluster \
             --set image.repository=danilkhasanov/demo \
             --set image.tag=${{ github.sha }} \
             --namespace=default \
             --create-namespace \
-            --debug  
-            --kube-apiserver https://127.0.0.1:6443
+            --debug
           # Можно добавить команды для деплоя через kubectl или helm, если нужно автоматизировать.
