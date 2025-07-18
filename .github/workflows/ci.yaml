@@ -42,21 +42,23 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -f demo/Dockerfile -t danilkhasanov/demo:${{ github.sha }} ./demo
-
-      - name: Push Docker image
-        run: |
-          docker push danilkhasanov/demo:${{ github.sha }}
+          # Сборка образа в среде k3d
+          docker build -f demo/Dockerfile -t k3d-mycluster-registry:5000/demo:${{ github.sha }} ./demo
+          docker push k3d-mycluster-registry:5000/demo:${{ github.sha }}
 
       - name: Setup Kubernetes
         run: |
           mkdir -p $HOME/.kube
           echo "${{ secrets.KUBECONFIG_BASE64 }}" | base64 -d > $HOME/.kube/config
 
-          # Заменяем host.docker.internal на доступный адрес
-          sed -i 's/host.docker.internal/172.17.0.1/g' $HOME/.kube/config
+          # Заменяем неработающий адрес на localhost
+          sed -i 's/host.docker.internal/127.0.0.1/g' $HOME/.kube/config
 
-          chmod 600 $HOME/.kube/config
+          # Пробрасываем порт Kubernetes API
+          kubectl port-forward service/kubernetes 6443:443 -n default --address=0.0.0.0 &
+          sleep 5
+
+          # Проверка
           kubectl cluster-info
           kubectl get nodes
 
