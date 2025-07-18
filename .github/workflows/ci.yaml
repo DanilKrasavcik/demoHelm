@@ -13,6 +13,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Install k3d
+        run: |
+          # Установка k3d
+          curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+          k3d --version  
+
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
