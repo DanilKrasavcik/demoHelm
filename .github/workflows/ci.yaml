@@ -53,48 +53,30 @@ jobs:
           # Создаем директорию .kube
           mkdir -p $HOME/.kube
 
-          # Проверяем, что секрет содержит данные
+          # Проверяем наличие секрета
           if [ -z "${{ secrets.KUBECONFIG_BASE64 }}" ]; then
-            echo "ERROR: KUBECONFIG_BASE64 secret is empty!"
+            echo "::error::KUBECONFIG_BASE64 secret is missing or empty!"
             exit 1
           fi
 
           # Декодируем и сохраняем kubeconfig
           echo "${{ secrets.KUBECONFIG_BASE64 }}" | base64 -d > $HOME/.kube/config
 
-          # Проверяем, что файл не пустой
+          # Проверяем что файл не пустой
           if [ ! -s "$HOME/.kube/config" ]; then
-            echo "ERROR: kubeconfig is empty after decoding!"
+            echo "::error::Decoded kubeconfig is empty!"
             exit 1
           fi
 
-          # Выводим информацию о конфиге (без sensitive данных)
-          echo "=== Kubeconfig summary ==="
-          kubectl config view --minify --raw | grep -v 'certificate-authority-data:' | grep -v 'client-certificate-data:' | grep -v 'client-key-data:'
-          echo "========================="
-
-          # Устанавливаем правильные права
+          # Устанавливаем права
           chmod 600 $HOME/.kube/config
 
-          # Проверяем доступные контексты
-          echo "=== Available contexts ==="
-          kubectl config get-contexts || true
-          echo "========================="
+          # Проверяем конфигурацию
+          echo "=== Kubernetes Config ==="
+          kubectl config view --minify --raw | grep -v -e 'certificate' -e 'key-data'
+          echo "========================"
 
-          # Автоматически определяем контекст
-          if ! CURRENT_CONTEXT=$(kubectl config current-context 2>/dev/null); then
-            echo "No current context set, using first available context"
-            CURRENT_CONTEXT=$(kubectl config view -o jsonpath='{.contexts[0].name}')
-            if [ -z "$CURRENT_CONTEXT" ]; then
-              echo "ERROR: No contexts found in kubeconfig!"
-              exit 1
-            fi
-            kubectl config use-context "$CURRENT_CONTEXT"
-          fi
-
-          echo "Using context: $CURRENT_CONTEXT"
-
-          # Проверяем подключение
+          # Проверяем доступность кластера
           kubectl cluster-info
           kubectl get nodes
 
