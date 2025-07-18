@@ -18,7 +18,15 @@ resources:                        # Лимиты ресурсов
 
 # Настройки сервиса
 service:
-  type: ClusterIP                 # Тип сервиса (ClusterIP/NodePort/LoadBalancer)
-  port: 49340                     # Внешний порт сервиса (который вы хотите использовать)
-  targetPort: 6443                # Порт контейнера (должен совпадать с EXPOSE в Dockerfile)
-  name: http                      # Имя порта
+  type: NodePort
+  port: 8080
+  targetPort: 8080
+  nodePort: 30080  # Порт на ноде (диапазон 30000-32767)
+
+ingress:
+  enabled: true
+  hosts:
+    - host: demo.localhost
+      paths:
+        - path: /
+          pathType: Prefix
