@@ -48,27 +48,28 @@ jobs:
 
       - name: Create k3d cluster with registry
         run: |
-          # Создаем registry с явным указанием имени хоста
-          k3d registry create myregistry --port 5000 --name k3d-registry.localhost
+          # Создаем registry (без флага --name)
+          k3d registry create myregistry --port 5000
 
           # Создаем кластер с привязкой к registry
           k3d cluster create mycluster \
-            --registry-use k3d-registry.localhost:5000 \
+            --registry-use k3d-myregistry:5000 \
             --agents 1
 
           # Добавляем запись в /etc/hosts
-          echo "127.0.0.1 k3d-registry.localhost" | sudo tee -a /etc/hosts
+          REGISTRY_IP=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' k3d-myregistry)
+          echo "$REGISTRY_IP k3d-myregistry" | sudo tee -a /etc/hosts
 
           # Проверяем доступность registry
-          curl -v http://k3d-registry.localhost:5000/v2/_catalog
+          curl -v http://k3d-myregistry:5000/v2/_catalog
 
       - name: Build and push Docker image
         run: |
-          # Собираем образ с правильным именем registry
-          docker build -f demo/Dockerfile -t k3d-registry.localhost:5000/demo:${{ github.sha }} ./demo
+          # Собираем образ
+          docker build -f demo/Dockerfile -t k3d-myregistry:5000/demo:${{ github.sha }} ./demo
 
-          # Пушим образ (добавляем --insecure для HTTP registry)
-          docker push k3d-registry.localhost:5000/demo:${{ github.sha }} --insecure
+          # Пушим образ (с флагом --insecure для HTTP)
+          docker push k3d-myregistry:5000/demo:${{ github.sha }} --insecure
 
       - name: Setup Kubernetes
         run: |
