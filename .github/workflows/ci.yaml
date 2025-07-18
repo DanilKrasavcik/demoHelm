@@ -58,10 +58,15 @@ jobs:
         run: |
           # Устанавливаем k3d (если еще не установлен)
           curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
-          # Получаем доступ к существующему кластеру
+          
+          # Создаем .kube директорию и получаем конфиг
+          mkdir -p ~/.kube
           k3d kubeconfig get mycluster > ~/.kube/config
-          kubectl cluster-info
-          kubectl get nodes        
+          chmod 600 ~/.kube/config
+
+    # Проверяем подключение
+    kubectl cluster-info
+    kubectl get nodes
 
       - name: Install Helm
         uses: azure/setup-helm@v3
