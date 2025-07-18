@@ -56,11 +56,17 @@ jobs:
           sed -i 's|https://host.docker.internal:[0-9]*|https://127.0.0.1:6443|g' $HOME/.kube/config
           chmod 600 $HOME/.kube/config
 
-      - name: Port forwarding for Kubernetes API
-        run: |
-          # Пробрасываем порт Kubernetes API
-          kubectl port-forward service/kubernetes 6443:443 -n default &
-          sleep 5  # Даем время для установки соединения
+      - name: Configure Kubernetes access
+        run: |          
+          # Проверяем доступные контексты
+          kubectl config get-contexts
+          
+          # Устанавливаем правильный контекст (замените на ваш реальный)
+          kubectl config use-context k3d-mycluster
+          
+          # Проверяем подключение
+          kubectl cluster-info
+          kubectl get nodes
 
       - name: Deploy to Minikube (optional)
         if: github.ref == 'refs/heads/main'
