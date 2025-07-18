@@ -57,6 +57,17 @@ jobs:
       - name: Install Helm
         uses: azure/setup-helm@v3
 
+      - name: Setup Kubernetes tools
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.27.6'  # Укажите нужную версию
+
+      - name: Configure Kubernetes
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
+          kubectl cluster-info    
+
       - name: Deploy to Dev
         if: github.ref == 'refs/heads/main'
         run: |
