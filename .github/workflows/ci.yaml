@@ -13,12 +13,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Install k3d
-        run: |
-          # Установка k3d
-          curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
-          k3d --version  
-
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
@@ -40,76 +34,26 @@ jobs:
         run: ./gradlew build --no-daemon
         working-directory: ./demo
 
-      - name: Log in to Docker Hub
+      - name: Login to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Create k3d cluster with registry
-        run: |
-          # Создаем registry (без флага --name)
-          k3d registry create myregistry --port 5000
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          push: true
+          tags: danilkhasanov/demo:latest
+          file: ./Dockerfile
 
-          # Создаем кластер с привязкой к registry
-          k3d cluster create mycluster \
-            --registry-use k3d-myregistry:5000 \
-            --agents 1
+      - name: Install Helm
+        uses: azure/setup-helm@v3
 
-          # Добавляем запись в /etc/hosts
-          REGISTRY_IP=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' k3d-myregistry)
-          echo "$REGISTRY_IP k3d-myregistry" | sudo tee -a /etc/hosts
-
-          # Проверяем доступность registry
-          curl -v http://k3d-myregistry:5000/v2/_catalog
-
-      - name: Build and push Docker image
-        run: |
-          # Собираем образ
-          docker build -f demo/Dockerfile -t k3d-myregistry:5000/demo:${{ github.sha }} ./demo
-
-          # Пушим образ (с флагом --insecure для HTTP)
-          docker push k3d-myregistry:5000/demo:${{ github.sha }} --insecure
-
-      - name: Setup Kubernetes
-        run: |
-          mkdir -p $HOME/.kube
-          echo "${{ secrets.KUBECONFIG_BASE64 }}" | base64 -d > $HOME/.kube/config
-
-          # Заменяем неработающий адрес на localhost
-          sed -i 's/host.docker.internal/127.0.0.1/g' $HOME/.kube/config
-
-          # Пробрасываем порт Kubernetes API
-          kubectl port-forward service/kubernetes 6443:443 -n default --address=0.0.0.0 &
-          sleep 5
-
-          # Проверка
-          kubectl cluster-info
-          kubectl get nodes
-
-      - name: Configure Kubernetes access
-        run: |
-          # Проверяем доступные контексты
-          echo "=== Available contexts ==="
-          kubectl config get-contexts
-          echo "========================="
-          
-          # Используем автоматически определенный контекст
-          CURRENT_CONTEXT=$(kubectl config current-context)
-          echo "Current context: $CURRENT_CONTEXT"
-          
-          # Проверяем подключение
-          kubectl cluster-info
-          kubectl get nodes
-
-      - name: Deploy to Minikube (optional)
+      - name: Deploy to Dev
         if: github.ref == 'refs/heads/main'
         run: |
           helm upgrade --install demo ./helm \
-            --kube-context=k3d-mycluster \
-            --set image.repository=danilkhasanov/demo \
-            --set image.tag=${{ github.sha }} \
-            --namespace=default \
+            --namespace dev \
             --create-namespace \
-            --debug
-          # Можно добавить команды для деплоя через kubectl или helm, если нужно автоматизировать.
+            --set image.tag=latest
