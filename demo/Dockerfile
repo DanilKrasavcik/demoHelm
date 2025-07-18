@@ -1,4 +1,4 @@
 FROM openjdk:17-jdk-slim
 VOLUME /tmp
-COPY build/libs/demo-1.0-SNAPSHOT.jar app.jar
+COPY demo-1.0-SNAPSHOT.jar app.jar
 ENTRYPOINT ["java","-jar","/app.jar"]
