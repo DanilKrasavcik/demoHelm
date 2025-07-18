@@ -55,54 +55,23 @@ jobs:
           tags: danilkhasanov/demo:latest
           file: docker-build/Dockerfile
 
-      - name: Setup k3d environment
+      - name: Connect to k3d cluster
         run: |
-          # Установка k3d
-          curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
-
-          # Удаление старого кластера (если есть)
-          k3d cluster delete mycluster || true
-
-          # Создание нового кластера
-          k3d cluster create mycluster \
-            --api-port 49340:6443 \
-            --port "30080:30080@loadbalancer" \
-            --wait
-
-          # Настройка доступа
           mkdir -p ~/.kube
-          k3d kubeconfig get mycluster > ~/.kube/config
+          echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
           chmod 600 ~/.kube/config
-
-          # Проверка
           kubectl config use-context k3d-mycluster
-          kubectl cluster-info
-          kubectl get nodes
+          kubectl get nodes  
 
       - name: Install Helm
         uses: azure/setup-helm@v3
 
-      - name: Deploy to k3d cluster
+      - name: Deploy application
         run: |
-          # Создаем namespace
-          kubectl create namespace dev --dry-run=client -o yaml | kubectl apply -f -
-          
-          # Деплой приложения
           helm upgrade --install demo ./helm \
-          --kube-context k3d-mycluster \
-          --namespace dev \
-          --create-namespace \
-          --set image.repository=danilkhasanov/demo \
-          --set image.tag=latest \
-          --set service.type=NodePort \
-          --set service.nodePort=30080 \
-          --wait \
-          --timeout 5m \
-          --debug
-
-      - name: Verify deployment
-        run: |
-          echo "Application endpoints:"
-          echo "1. NodePort: http://host.docker.internal:30080"
-          echo "2. Port-forward: kubectl port-forward svc/demo 8080:80 -n dev"
-          kubectl get all -n dev
+            --kube-context k3d-mycluster \
+            --namespace dev \
+            --create-namespace \
+            --set service.type=NodePort \
+            --set service.nodePort=30080 \
+            --wait
