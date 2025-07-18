@@ -48,10 +48,15 @@ jobs:
         run: |
           docker push danilkhasanov/demo:${{ github.sha }}
 
+      - name: Setup Kubernetes config
+        run: |
+          echo "${{ secrets.KUBECONFIG_BASE64}}" | base64 -d > $HOME/.kube/config
+          chmod 600 $HOME
+
       - name: Deploy to Minikube (optional)
         if: github.ref == 'refs/heads/main'
         env:
-          KUBECONFIG: ${{ secrets.KUBECONFIG }}
+          KUBECONFIG: ${{ secrets.KUBECONFIG_BASE64 }}
         run: |
           helm upgrade --install demo ./helm \
             --set image.repository=danilkhasanov/demo \
